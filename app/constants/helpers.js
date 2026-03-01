@@ -9,6 +9,11 @@ export function makeSection(overrides = {}) {
     settings: {
       label: 'Section',
       bg: '#ffffff',
+      bgType: 'color',
+      // Support both shorthand (padV/padH) and individual keys.
+      // StructureRenderer reads padV; SectionProps writes padTop/padBottom.
+      padTop:    0,
+      padBottom: 0,
       padV: 0,
       padH: 0,
       visible: true,
@@ -41,19 +46,45 @@ export function makeRow(overrides = {}) {
   };
 }
 
+/**
+ * Standard column settings schema.
+ * These keys are used by:
+ *  - CanvasColumn (edit mode)
+ *  - ColView / StructureRenderer (preview mode)
+ *  - ColProps (right panel editor)
+ * Never change key names without updating all three.
+ */
 export function makeColumn(overrides = {}) {
   return {
     id: genId(),
     type: 'column',
     settings: {
-      bg: '',
-      padV: 8,
-      padH: 12,
-      align: 'flex-start',
-      valign: 'center',
+      // Layout
+      align:   'flex-start',
+      valign:  'flex-start',
+      // Padding (individual keys — ColProps writes these)
+      padTop:    8,
+      padBottom: 8,
+      padLeft:   12,
+      padRight:  12,
+      // Gap between elements
       gap: 12,
+      // Background
+      bgType: 'color',
+      bg: '',
+      // Border
+      borderStyle: 'none',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+      radius: 0,
+      // Shadow
+      shadow: 'none',
+      // Size
+      minHeight: '',
+      opacity: 100,
     },
     elements: [],
+    // columns[] added dynamically when "Make Row" is used
     ...overrides,
   };
 }
@@ -66,16 +97,51 @@ export function makeElement(type, defaultProps = {}) {
   };
 }
 
-export function propsToStyle(props) {
-  if (!props) return {};
-  const style = {};
-  if (props.padding) {
-    const p = props.padding;
-    style.padding = `${p.top || 0}px ${p.right || 0}px ${p.bottom || 0}px ${p.left || 0}px`;
-  }
-  if (props.margin) {
-    const m = props.margin;
-    style.margin = `${m.top || 0}px ${m.right || 0}px ${m.bottom || 0}px ${m.left || 0}px`;
-  }
-  return style;
+export function makeGridCell(overrides = {}) {
+  return {
+    id: genId(),
+    colStart: 1,
+    colEnd: 2,
+    rowStart: 1,
+    rowEnd: 2,
+    settings: {
+      bg: '',
+      bgType: 'color',
+      padTop: 16, padBottom: 16, padLeft: 16, padRight: 16,
+      radius: 0,
+      shadow: 'none',
+      align: 'flex-start',
+      valign: 'flex-start',
+      minHeight: '',
+      borderStyle: 'none',
+      borderWidth: 1,
+      borderColor: '#e2e8f0',
+    },
+    elements: [],
+    ...overrides,
+  };
+}
+
+export function makeGrid(overrides = {}) {
+  return {
+    id: genId(),
+    type: 'grid',
+    settings: {
+      label: 'Grid',
+      columns: 3,
+      rows: 2,
+      colGap: 16,
+      rowGap: 16,
+      padTop: 16, padBottom: 16, padLeft: 16, padRight: 16,
+      bgType: 'color',
+      bg: '',
+      tabletColumns: 2,
+      mobileColumns: 1,
+      maxWidth: 1280,
+      widthMode: 'boxed',
+      visible: true,
+    },
+    cells: [],
+    ...overrides,
+  };
 }

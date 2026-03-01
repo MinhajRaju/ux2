@@ -6,26 +6,33 @@
  */
 import { useState, useEffect } from 'react';
 import { uid, slugify, saveStore, getInitialData } from '../lib/themeStore';
+import { T } from '../constants/theme';
 import PageBuilder from '../builders/PageBuilder';
-import HeaderBuilder, { DEFAULT_HEADER_DATA } from '../builders/HeaderBuilder';
-import FooterBuilder, { DEFAULT_FOOTER_DATA } from '../builders/FooterBuilder';
+import TemplateBuilder from '../builders/TemplateBuilder';
+import { useHeaderStore, useFooterStore } from '../store/useBuilderStore';
+import { headerCanvasConfig } from '../configs/headerCanvasConfig';
+import { footerCanvasConfig } from '../configs/footerCanvasConfig';
 import { LivePreview } from './LivePreview';
 
-// ── Modern Color Palette & Design Tokens ───────────────────
+// ── Dashboard Design Tokens ────────────────────────────────
+// Unique to ThemeBuilder dashboard (intentionally pink, separate from builder indigo).
+// Shared tokens (text, border, bg) delegate to T from constants/theme.
 const PK = {
-  primary: '#db2777', // Pink-600
-  primaryLight: '#fce7f3', // Pink-100
-  mid: '#7c3aed', // Violet-600
-  bg: '#F9FAFB', // Gray-50 (Main background)
-  surface: '#FFFFFF',
-  border: '#E5E7EB', // Gray-200
-  borderHover: '#D1D5DB', // Gray-300
-  text: '#111827', // Gray-900
-  textMid: '#4B5563', // Gray-600
-  textLight: '#9CA3AF', // Gray-400
-  shadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)',
-  shadowHover: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-  radius: '12px',
+  // Dashboard-unique accent colors
+  primary:     '#db2777', // Pink-600 — dashboard CTA
+  primaryLight:'#fce7f3', // Pink-100
+  mid:         '#7c3aed', // Violet-600
+  // Shared with T
+  bg:          T.bg,
+  surface:     T.panel,
+  border:      T.border,
+  borderHover: '#D1D5DB',
+  text:        T.text,
+  textMid:     T.textMid,
+  textLight:   T.textLight,
+  shadow:      '0 1px 3px 0 rgba(0,0,0,0.1), 0 1px 2px -1px rgba(0,0,0,0.1)',
+  shadowHover: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1)',
+  radius:      '12px',
 };
 
 // Refined Type Colors
@@ -526,8 +533,8 @@ export default function ThemeBuilder() {
       id: uid(), type, name,
       slug: type === 'page' ? (slug || slugify(name)) : null,
       sections: [],
-      headerData: type === 'header' ? deepClone(DEFAULT_HEADER_DATA) : null,
-      footerData: type === 'footer' ? deepClone(DEFAULT_FOOTER_DATA) : null,
+      headerData: type === 'header' ? deepClone({ sections: [{ id: 'header-section-1', type: 'section', settings: { label: 'Header Section', bg: '#ffffff', visible: true, padV: 0, padH: 0 }, rows: [] }] }) : null,
+      footerData: type === 'footer' ? deepClone({ sections: [{ id: 'footer-section-1', type: 'section', settings: { label: 'Footer Section', bg: '#1e293b', visible: true, padV: 0, padH: 0 }, rows: [] }] }) : null,
       lastEdited: now(),
     };
     setTemplates(p => [...p, tpl]);
@@ -579,10 +586,13 @@ export default function ThemeBuilder() {
 
     if (type === 'header') {
       return (
-        <HeaderBuilder
+        <TemplateBuilder
+          type="header"
+          store={useHeaderStore}
+          config={headerCanvasConfig}
           templateName={editingTemplate.name}
-          initialData={editingTemplate.headerData || deepClone(DEFAULT_HEADER_DATA)}
-          onSave={(headerData) => saveTemplate(editingTemplate.id, { headerData })}
+          initialData={editingTemplate.headerData || { sections: [] }}
+          onSave={(sections) => saveTemplate(editingTemplate.id, { headerData: { sections } })}
           onBack={() => setEditingTemplate(null)}
         />
       );
@@ -590,10 +600,13 @@ export default function ThemeBuilder() {
 
     if (type === 'footer') {
       return (
-        <FooterBuilder
+        <TemplateBuilder
+          type="footer"
+          store={useFooterStore}
+          config={footerCanvasConfig}
           templateName={editingTemplate.name}
-          initialData={editingTemplate.footerData || deepClone(DEFAULT_FOOTER_DATA)}
-          onSave={(footerData) => saveTemplate(editingTemplate.id, { footerData })}
+          initialData={editingTemplate.footerData || { sections: [] }}
+          onSave={(sections) => saveTemplate(editingTemplate.id, { footerData: { sections } })}
           onBack={() => setEditingTemplate(null)}
         />
       );

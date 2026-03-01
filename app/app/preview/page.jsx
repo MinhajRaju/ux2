@@ -2,7 +2,10 @@
 // Previews the site home page (slug="/")
 'use client';
 import { useEffect, useState } from 'react';
-import { StructureRenderer } from '@/components/renderer/StructureRenderer';
+import { StructureRenderer } from '@/components/shared/StructureRenderer';
+import { headerCanvasConfig } from '@/configs/headerCanvasConfig';
+import { pageCanvasConfig }   from '@/configs/pageCanvasConfig';
+import { footerCanvasConfig } from '@/configs/footerCanvasConfig';
 import { getPageBySlug, getHeaderById, getFooterById, getGlobalSettings } from '@/lib/db';
 
 export default function PreviewHomePage() {
@@ -29,9 +32,25 @@ export default function PreviewHomePage() {
 
   return (
     <>
-      {data.header && <StructureRenderer data={data.header} />}
-      <StructureRenderer data={data.page} />
-      {data.footer && <StructureRenderer data={data.footer} />}
+      {data.header && (
+        <StructureRenderer
+          data={data.header}
+          mode="view"
+          elementMap={headerCanvasConfig.elementMap}
+        />
+      )}
+      <StructureRenderer
+        data={data.page}
+        mode="view"
+        elementMap={pageCanvasConfig.elementMap}
+      />
+      {data.footer && (
+        <StructureRenderer
+          data={data.footer}
+          mode="view"
+          elementMap={footerCanvasConfig.elementMap}
+        />
+      )}
     </>
   );
 }

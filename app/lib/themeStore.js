@@ -1,8 +1,13 @@
 'use client';
 
 // ── ID & slug helpers ─────────────────────────────────────────
-export const uid = () =>
-  Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+/** Collision-proof ID using crypto.randomUUID (modern) or fallback */
+export const uid = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 11);
+};
 
 export const slugify = (s) =>
   (s || '')

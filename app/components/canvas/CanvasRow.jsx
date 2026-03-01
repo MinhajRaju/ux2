@@ -1,220 +1,315 @@
 'use client';
-import { useState, useRef, useCallback, useEffect } from 'react';
-import { Settings, Trash2, Plus, Columns3, Minus, GripVertical } from 'lucide-react';
-import { T, SHADOWS } from '../../constants/theme';
+import { useEffect, useRef, useState } from 'react';
+import { Trash2, Plus, Columns3, Minus, Eye, EyeOff, Copy } from 'lucide-react';
+import { T } from '../../constants/theme';
+import { resolveBgStyle } from '../../lib/bgStyle';
 import { CanvasColumn } from './CanvasColumn';
+import { ResizableGrid } from './ResizableGrid';
 
-function ResizableGrid({ columns, colWidths, onResize, rowId, selectedColId, gap, children }) {
-  const containerRef = useRef(null);
-  const widthsRef = useRef(null);
-  const count = columns.length;
-  const MIN = 8;
-
-  const [widths, setWidths] = useState(() => colWidths?.length === count ? colWidths : columns.map(() => 100 / count));
-  const [dragging, setDragging] = useState(null);
-
+// ── inject custom CSS from row.settings once per class ──────────────────────
+function useRowCss(rowId, className, css) {
   useEffect(() => {
-    const init = colWidths?.length === count ? colWidths : columns.map(() => 100 / count);
-    setWidths(init);
-    widthsRef.current = init;
-  }, [count]);
-
-  const startDrag = useCallback((e, i) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragging(i);
-    const containerWidth = containerRef.current?.getBoundingClientRect().width || 1;
-    const startX = e.clientX;
-    const startWidths = [...(widthsRef.current || widths)];
-
-    const onMove = me => {
-      const delta = (me.clientX - startX) / containerWidth * 100;
-      const next = [...startWidths];
-      let l = startWidths[i] + delta;
-      let r = startWidths[i + 1] - delta;
-      if (l < MIN) { r -= (MIN - l); l = MIN; }
-      if (r < MIN) { l -= (MIN - r); r = MIN; }
-      next[i] = l; next[i + 1] = r;
-      widthsRef.current = next;
-      setWidths([...next]);
-    };
-
-    const onUp = () => {
-      setDragging(null);
-      if (onResize && widthsRef.current) onResize(rowId, [...widthsRef.current]);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [widths, onResize, rowId]);
-
-  const cols = Array.isArray(children) ? children : [children];
-
-  return (
-    <div ref={containerRef} style={{ display: 'flex', gap, flex: 1, minWidth: 0, userSelect: dragging !== null ? 'none' : 'auto', position: 'relative' }}>
-      {cols.map((col, i) => {
-        const w = widths[i] ?? 100 / count;
-        return (
-          <div key={columns[i]?.id || i} style={{ flex: w, minWidth: 0, position: 'relative', transition: dragging === null ? 'flex 0.2s ease' : 'none' }}>
-            {dragging === i && (
-              <div style={{ position: 'absolute', top: -28, right: -16, zIndex: 200, background: '#0f172a', color: '#fff', borderRadius: 20, padding: '3px 10px', fontSize: 11, fontWeight: 700, pointerEvents: 'none' }}>
-                {Math.round(w)}%
-              </div>
-            )}
-            {col}
-            {i < count - 1 && (
-              <div
-                onPointerDown={e => startDrag(e, i)}
-                style={{
-                  position: 'absolute', top: 0, bottom: 0, right: -(gap / 2 + 6),
-                  width: 20, cursor: 'col-resize', zIndex: 50,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  opacity: dragging === i ? 1 : 0, transition: 'opacity 0.2s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
-                onMouseLeave={e => { if (dragging !== i) e.currentTarget.style.opacity = '0'; }}
-              >
-                <div style={{
-                  width: 4, height: 36, borderRadius: 4,
-                  background: dragging === i ? T.primary : '#94a3b8',
-                  boxShadow: dragging === i ? `0 0 0 4px ${T.primary}30` : 'none',
-                  transition: 'all 0.2s',
-                }} />
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+    if (typeof document === 'undefined') return;
+    const id = `row-custom-${rowId}`;
+    let tag = document.getElementById(id);
+    if (!css || !className) { tag?.remove(); return; }
+    if (!tag) { tag = document.createElement('style'); tag.id = id; document.head.appendChild(tag); }
+    tag.textContent = css;
+    return () => { document.getElementById(id)?.remove(); };
+  }, [rowId, className, css]);
 }
 
-function ToolBtn({ onClick, title, children, hoverColor }) {
+// ── TinyBtn ───────────────────────────────────────────────────────────────────
+function TinyBtn({ onClick, title, color, bg, children }) {
   return (
     <button
-      onClick={onClick} title={title}
-      onMouseEnter={e => { e.currentTarget.style.background = hoverColor ? `${hoverColor}18` : '#f1f5f9'; e.currentTarget.style.color = hoverColor || '#0f172a'; }}
-      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}
-      style={{
-        width: 28, height: 28, border: 'none', background: 'transparent',
-        borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center',
-        justifyContent: 'center', transition: 'all 0.15s', color: '#64748b',
-      }}
+      onClick={e => { e.stopPropagation(); onClick?.(); }}
+      title={title}
+      style={{ width:22, height:22, border:'none', background:bg||'#f1f5f9', color:color||'#64748b', borderRadius:5, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, boxShadow:'0 1px 3px rgba(0,0,0,0.08)', transition:'transform 0.1s' }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.12)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
     >
       {children}
     </button>
   );
 }
+function Divider() {
+  return <div style={{ width:1, height:14, background:'#e2e8f0', margin:'0 1px', flexShrink:0 }} />;
+}
 
-export function CanvasRow({ row, secId, selectedId, selectedColId, elementMap, onSelectEl, onSelectCol, onSelectRow, onAddRow, onDeleteRow, onAddCol, onDeleteCol, onUpdateRow, onResize, onAddElement, onMoveEl, isFirst }) {
+// ── RowCornerToolbar ──────────────────────────────────────────────────────────
+function RowCornerToolbar({ s, row, isFirst, onUpdateRow, onAddCol, onDeleteCol, onDeleteRow, onAddRow, onSelectRow, onDuplicateRow }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div
+      style={{ position:'absolute', top:4, right:4, zIndex:300, display:'flex', alignItems:'center', gap:2 }}
+      onClick={e => e.stopPropagation()}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <div style={{ display:'flex', alignItems:'center', gap:2, overflow:'hidden', maxWidth:expanded?260:0, opacity:expanded?1:0, transition:'max-width 0.18s ease, opacity 0.14s ease', pointerEvents:expanded?'auto':'none' }}>
+        <TinyBtn onClick={() => onUpdateRow?.({ visible: !(s.visible ?? true) })} title={s.visible !== false ? 'Hide Row' : 'Show Row'} color="#64748b" bg="#f1f5f9">
+          {s.visible !== false ? <Eye size={11} /> : <EyeOff size={11} />}
+        </TinyBtn>
+        <Divider />
+        <TinyBtn onClick={onAddCol} title="Add Column" color={T.primary} bg={`${T.primary}12`}><Columns3 size={11} /></TinyBtn>
+        {row.columns.length > 0 && <TinyBtn onClick={onDeleteCol} title="Remove Last Column" color="#f59e0b" bg="#fffbeb"><Minus size={11} /></TinyBtn>}
+        <Divider />
+        <TinyBtn onClick={onAddRow} title="Add Row Below" color={T.primary} bg={`${T.primary}12`}><Plus size={11} /></TinyBtn>
+        <TinyBtn onClick={onDuplicateRow} title="Duplicate Row" color="#10b981" bg="#f0fdf4"><Copy size={10} /></TinyBtn>
+        <Divider />
+        {isFirst
+          ? <button disabled title="Cannot delete the first row." style={{ width:22, height:22, border:'none', background:'#f1f5f9', color:'#cbd5e1', borderRadius:5, cursor:'not-allowed', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}><Trash2 size={10} /></button>
+          : <TinyBtn onClick={onDeleteRow} title="Delete Row" color="#ef4444" bg="#fee2e2"><Trash2 size={10} /></TinyBtn>
+        }
+      </div>
+      <span
+        onClick={e => { e.stopPropagation(); onSelectRow?.(); }}
+        title="Select Row"
+        style={{ fontSize:8, fontWeight:800, color:'#10b981', background:'#ecfdf5', border:'1px solid #10b98130', padding:'2px 6px', borderRadius:4, cursor:'pointer', userSelect:'none', whiteSpace:'nowrap', lineHeight:1.4, boxShadow:'0 1px 4px rgba(0,0,0,0.07)', transition:'background 0.12s' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#d1fae5'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#ecfdf5'; }}
+      >
+        {s.label ? s.label.toUpperCase().slice(0, 8) : 'ROW'}
+      </span>
+    </div>
+  );
+}
+
+// ── ColStyleWrapper — applies divider lines between columns ──────────────────
+function ColStyleWrapper({ colStyle, colDividerColor, children }) {
+  if (!colStyle || colStyle === 'normal') return <>{children}</>;
+  const borderStyle = colStyle === 'dash' ? 'dashed' : 'solid';
+  const color = colDividerColor || '#e2e8f0';
+  const kids = Array.isArray(children) ? children : [children];
+  return (
+    <>
+      {kids.map((child, i) => (
+        <div
+          key={i}
+          style={{
+            flex: 1, minWidth: 0,
+            borderRight: i < kids.length - 1 ? `1.5px ${borderStyle} ${color}` : 'none',
+            paddingRight: i < kids.length - 1 ? 8 : 0,
+          }}
+        >
+          {child}
+        </div>
+      ))}
+    </>
+  );
+}
+
+// ── Main CanvasRow ────────────────────────────────────────────────────────────
+export function CanvasRow({
+  row, secId, selectedId, selectedColId, elementMap,
+  onSelectEl, onSelectCol, onSelectRow, onAddRow, onDeleteRow,
+  onAddCol, onDeleteCol, onUpdateRow, onDuplicateRow, onResize,
+  onAddElement, onMoveEl, onReorderEl, onDuplicateEl, onDeleteEl,
+  isFirst, onOpenColModal, onDeleteSubCol, onClearNesting,
+  onResizeSubCols, onSelectSubCol, onAddSubRow, onDeleteSubRow,
+  onAddSubRowCol, onDeleteSubRowCol, onResizeSubRowCols, onClearSubRows,
+  isMobile, onUpdateCol, onUpdateSubCol, onSelectSubRow,
+}) {
   const [hovered, setHovered] = useState(false);
   const s = row.settings || {};
 
-  const getBg = () => {
-    if (s.bgType === 'gradient') return { background: `linear-gradient(${s.gradientDir || '135deg'}, ${s.gradientFrom || '#6366f1'}, ${s.gradientTo || '#a855f7'})` };
-    if (s.bgType === 'image' && s.bgImage) return { backgroundImage: `url(${s.bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-    return { background: s.bg || '#ffffff' };
+  // inject custom CSS
+  useRowCss(row.id, s.customClass, s.customCss);
+
+  // ── Width ──
+  let innerMaxW;
+  if (s.widthMode === 'full') innerMaxW = '100%';
+  else if (s.widthMode === 'custom') innerMaxW = `${s.customWidth || 900}px`;
+  else innerMaxW = `min(${s.maxWidth || 1280}px, 100%)`;
+
+  // ── Vertical align → alignItems ──
+  const valignMap = { top: 'flex-start', middle: 'center', bottom: 'flex-end', stretch: 'stretch' };
+  const alignItems = valignMap[s.valign || 'middle'] || 'center';
+
+  // ── Padding (4-side, fallback to old padH/padV) ──
+  const pt = +(s.padTop    ?? s.padV ?? 0);
+  const pb = +(s.padBottom ?? s.padV ?? 0);
+  const pl = +(s.padLeft   ?? s.padH ?? 32);
+  const pr = +(s.padRight  ?? s.padH ?? 32);
+
+  // ── Margin ──
+  const mt = +(s.marginTop    ?? 0);
+  const mb = +(s.marginBottom ?? 0);
+  const ml = +(s.marginLeft   ?? 0);
+  const mr = +(s.marginRight  ?? 0);
+
+  // ── column depth hover style (injected per-row) ──
+  const depthCss = s.colDepthHover ? `
+    [data-row-id="${row.id}"] .col-depth-hover:hover {
+      box-shadow: 0 ${Math.round(s.colDepthIntensity * 0.2 || 8)}px ${Math.round(s.colDepthIntensity * 0.6 || 24)}px rgba(0,0,0,${(s.colDepthIntensity || 40) / 400});
+      transform: translateY(-2px);
+      transition: box-shadow 0.2s, transform 0.2s;
+    }
+  ` : '';
+
+  const rowWrapStyle = {
+    ...resolveBgStyle(s, 'transparent'),
+    position: 'relative',
+    flexShrink: 0,
+    borderRadius: s.radius ? `${s.radius}px` : undefined,
+    border: s.borderStyle && s.borderStyle !== 'none'
+      ? `${s.borderWidth || 1}px ${s.borderStyle} ${s.borderColor || '#E2E8F0'}`
+      : undefined,
+    marginTop:    mt ? `${mt}px` : undefined,
+    marginBottom: mb ? `${mb}px` : 2,
+    marginLeft:   ml ? `${ml}px` : undefined,
+    marginRight:  mr ? `${mr}px` : undefined,
+    outline: hovered ? `1px solid ${T.primary}25` : '1px solid transparent',
+    outlineOffset: -1,
+    transition: 'outline 0.2s',
+    overflow: 'visible',
   };
 
-  const maxW = s.widthMode === 'full' ? '100%' : `min(${s.maxWidth || 1280}px, 100%)`;
+  const innerStyle = {
+    minHeight: s.height || 60,
+    width: innerMaxW,
+    margin: '0 auto',
+    paddingTop:    isMobile ? `${Math.min(pt, 24)}px` : `${pt}px`,
+    paddingBottom: isMobile ? `${Math.min(pb, 24)}px` : `${pb}px`,
+    paddingLeft:   isMobile ? `${Math.min(pl, 16)}px` : `${pl}px`,
+    paddingRight:  isMobile ? `${Math.min(pr, 16)}px` : `${pr}px`,
+    display: 'flex',
+    alignItems: isMobile && !s.forceColsMobile ? 'flex-start' : alignItems,
+    justifyContent: s.halign || 'center',
+    flexDirection: isMobile && !s.forceColsMobile ? 'column' : 'row',
+    boxSizing: 'border-box',
+    position: 'relative',
+    zIndex: 1,
+  };
+
+  const extraClass = s.customClass || '';
 
   return (
     <div
+      data-row-id={row.id}
+      className={extraClass || undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={(e) => { e.stopPropagation(); onSelectRow?.(); }}
-      style={{
-        ...getBg(),
-        position: 'relative',
-        flexShrink: 0,
-        outline: hovered ? `1px solid ${T.primary}30` : '1px solid transparent',
-        outlineOffset: -1,
-        transition: 'outline 0.2s',
-      }}
+      onTouchStart={() => setHovered(true)}
+      onTouchEnd={() => setTimeout(() => setHovered(false), 2000)}
+      onClick={e => { e.stopPropagation(); onSelectRow?.(); }}
+      style={rowWrapStyle}
     >
-      {/* Floating row toolbar */}
-      <div style={{
-        position: 'absolute', top: -20, left: '50%',
-        transform: `translateX(-50%) translateY(${hovered ? 0 : 8}px) scale(${hovered ? 1 : 0.95})`,
-        zIndex: 100,
-        opacity: hovered ? 1 : 0,
-        pointerEvents: hovered ? 'auto' : 'none',
-        transition: 'all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-        display: 'flex', alignItems: 'center', gap: 3,
-        background: 'rgba(255,255,255,0.92)',
-        backdropFilter: 'blur(12px)',
-        border: '1px solid rgba(226,232,240,0.8)',
-        borderRadius: 100,
-        padding: '3px 5px',
-        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.1)',
-      }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b', padding: '0 8px 0 10px', borderRight: '1px solid #e2e8f0', marginRight: 2, userSelect: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-          {s.label || 'Row'}
-        </span>
-        <ToolBtn onClick={() => onUpdateRow?.({ visible: !s.visible })} title="Toggle Visibility">
-          <span style={{ fontSize: 13 }}>{s.visible !== false ? '👁' : '👁‍🗨'}</span>
-        </ToolBtn>
-        <ToolBtn onClick={onAddCol} title="Add Column" hoverColor={T.primary}><Columns3 size={14} /></ToolBtn>
-        {row.columns.length > 0 && <ToolBtn onClick={onDeleteCol} title="Remove Last Column" hoverColor={T.danger}><Minus size={14} /></ToolBtn>}
-        <div style={{ width: 1, height: 14, background: '#e2e8f0', margin: '0 1px' }} />
-        {!isFirst && <ToolBtn onClick={onDeleteRow} title="Delete Row" hoverColor={T.danger}><Trash2 size={13} /></ToolBtn>}
-        <ToolBtn onClick={onAddRow} title="Add Row Below" hoverColor={T.primary}><Plus size={13} /></ToolBtn>
-      </div>
+      {/* inject col depth hover css */}
+      {depthCss && <style>{depthCss}</style>}
+
+      {/* Corner toolbar */}
+      {hovered && (
+        <RowCornerToolbar
+          s={s} row={row} isFirst={isFirst}
+          onUpdateRow={onUpdateRow}
+          onAddCol={onAddCol}
+          onDeleteCol={onDeleteCol}
+          onDeleteRow={onDeleteRow}
+          onAddRow={onAddRow}
+          onSelectRow={onSelectRow}
+          onDuplicateRow={onDuplicateRow}
+        />
+      )}
 
       {/* Row content */}
-      <div style={{
-        minHeight: s.height || 60,
-        width: maxW,
-        margin: '0 auto',
-        padding: `0 ${s.padH || 32}px`,
-        display: 'flex',
-        alignItems: 'center',
-        boxSizing: 'border-box',
-        position: 'relative',
-        zIndex: 1,
-      }}>
+      <div style={innerStyle}>
         {row.columns.length === 0 ? (
           <div
-            onClick={(e) => { e.stopPropagation(); onAddCol(); }}
-            style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              minHeight: 50, border: '2px dashed #cbd5e1', borderRadius: 12,
-              background: '#f8fafc', cursor: 'pointer', transition: 'all 0.2s',
-              color: '#94a3b8', gap: 8,
-            }}
+            onClick={e => { e.stopPropagation(); onAddCol(); }}
+            style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', minHeight:50, border:'2px dashed #cbd5e1', borderRadius:12, background:'#f8fafc', cursor:'pointer', transition:'all 0.2s', color:'#94a3b8', gap:8 }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = T.primary; e.currentTarget.style.color = T.primary; e.currentTarget.style.background = `${T.primary}05`; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = '#f8fafc'; }}
           >
-            <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e2e8f0' }}>
+            <div style={{ width:28, height:28, borderRadius:'50%', background:'#fff', boxShadow:'0 1px 4px rgba(0,0,0,0.06)', display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #e2e8f0' }}>
               <Plus size={15} />
             </div>
-            <span style={{ fontSize: 12, fontWeight: 600 }}>Add a Column</span>
+            <span style={{ fontSize:12, fontWeight:600 }}>Add a Column</span>
+          </div>
+        ) : s.colStyle && s.colStyle !== 'normal' ? (
+          // divided / dash — render columns with divider borders (no resize handles)
+          <div style={{ display:'flex', flex:1, width:'100%', gap: isMobile && !s.forceColsMobile ? 0 : (s.colGap ?? 12), flexDirection: isMobile && !s.forceColsMobile ? 'column' : 'row' }}>
+            {row.columns.map((col, i) => (
+              <div
+                key={col.id}
+                className={s.colDepthHover ? 'col-depth-hover' : undefined}
+                style={{
+                  flex: isMobile && !s.forceColsMobile ? 'none' : (row.colWidths?.[i] ?? (100 / row.columns.length)),
+                  width: isMobile && !s.forceColsMobile ? '100%' : undefined,
+                  minWidth: 0,
+                  borderRight: !isMobile && i < row.columns.length - 1
+                    ? `1.5px ${s.colStyle === 'dash' ? 'dashed' : 'solid'} ${s.colDividerColor || '#e2e8f0'}`
+                    : 'none',
+                  paddingRight: !isMobile && i < row.columns.length - 1 ? (s.colGap ?? 12) / 2 : 0,
+                  paddingLeft:  !isMobile && i > 0 ? (s.colGap ?? 12) / 2 : 0,
+                  marginBottom: isMobile && !s.forceColsMobile ? 16 : 0,
+                }}
+              >
+                <CanvasColumn
+                  col={col} rowId={row.id} secId={secId}
+                  selectedId={selectedId} selectedColId={selectedColId}
+                  elementMap={elementMap}
+                  onSelectEl={onSelectEl} onSelectCol={onSelectCol}
+                  onAddElement={onAddElement} onMoveEl={onMoveEl}
+                  onReorderEl={onReorderEl} onDuplicateEl={onDuplicateEl} onDeleteEl={onDeleteEl}
+                  onOpenColModal={onOpenColModal}
+                  onDeleteSubCol={onDeleteSubCol} onClearNesting={onClearNesting}
+                  onResizeSubCols={onResizeSubCols} onSelectSubCol={onSelectSubCol}
+                  onAddSubRow={onAddSubRow} onDeleteSubRow={onDeleteSubRow}
+                  onAddSubRowCol={onAddSubRowCol} onDeleteSubRowCol={onDeleteSubRowCol}
+                  onResizeSubRowCols={onResizeSubRowCols} onClearSubRows={onClearSubRows}
+                  onUpdateCol={onUpdateCol} onUpdateSubCol={onUpdateSubCol}
+                  onSelectSubRow={onSelectSubRow}
+                />
+              </div>
+            ))}
+          </div>
+        ) : isMobile && !s.forceColsMobile ? (
+          // Mobile preview: stack columns vertically
+          <div style={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 16 }}>
+            {row.columns.map(col => (
+              <div key={col.id} className={s.colDepthHover ? 'col-depth-hover' : undefined} style={{ width: '100%' }}>
+                <CanvasColumn
+                  col={col} rowId={row.id} secId={secId}
+                  selectedId={selectedId} selectedColId={selectedColId}
+                  elementMap={elementMap}
+                  onSelectEl={onSelectEl} onSelectCol={onSelectCol}
+                  onAddElement={onAddElement} onMoveEl={onMoveEl}
+                  onReorderEl={onReorderEl} onDuplicateEl={onDuplicateEl} onDeleteEl={onDeleteEl}
+                  onOpenColModal={onOpenColModal}
+                  onDeleteSubCol={onDeleteSubCol} onClearNesting={onClearNesting}
+                  onResizeSubCols={onResizeSubCols} onSelectSubCol={onSelectSubCol}
+                  onAddSubRow={onAddSubRow} onDeleteSubRow={onDeleteSubRow}
+                  onAddSubRowCol={onAddSubRowCol} onDeleteSubRowCol={onDeleteSubRowCol}
+                  onResizeSubRowCols={onResizeSubRowCols} onClearSubRows={onClearSubRows}
+                  onUpdateCol={onUpdateCol} onUpdateSubCol={onUpdateSubCol}
+                  onSelectSubRow={onSelectSubRow}
+                />
+              </div>
+            ))}
           </div>
         ) : (
-          <ResizableGrid
-            columns={row.columns}
-            colWidths={row.colWidths}
-            gap={s.colGap || 20}
-            onResize={onResize}
-            rowId={row.id}
-            selectedColId={selectedColId}
-          >
+          <ResizableGrid columns={row.columns} colWidths={row.colWidths} gap={s.colGap ?? 12} onResize={onResize} containerId={row.id}>
             {row.columns.map(col => (
-              <CanvasColumn
-                key={col.id}
-                col={col}
-                rowId={row.id}
-                secId={secId}
-                selectedId={selectedId}
-                selectedColId={selectedColId}
-                elementMap={elementMap}
-                onSelectEl={onSelectEl}
-                onSelectCol={onSelectCol}
-                onAddElement={onAddElement}
-                onMoveEl={onMoveEl}
-              />
+              <div key={col.id} className={s.colDepthHover ? 'col-depth-hover' : undefined} style={{ height:'100%' }}>
+                <CanvasColumn
+                  col={col} rowId={row.id} secId={secId}
+                  selectedId={selectedId} selectedColId={selectedColId}
+                  elementMap={elementMap}
+                  onSelectEl={onSelectEl} onSelectCol={onSelectCol}
+                  onAddElement={onAddElement} onMoveEl={onMoveEl}
+                  onReorderEl={onReorderEl} onDuplicateEl={onDuplicateEl} onDeleteEl={onDeleteEl}
+                  onOpenColModal={onOpenColModal}
+                  onDeleteSubCol={onDeleteSubCol} onClearNesting={onClearNesting}
+                  onResizeSubCols={onResizeSubCols} onSelectSubCol={onSelectSubCol}
+                  onAddSubRow={onAddSubRow} onDeleteSubRow={onDeleteSubRow}
+                  onAddSubRowCol={onAddSubRowCol} onDeleteSubRowCol={onDeleteSubRowCol}
+                  onResizeSubRowCols={onResizeSubRowCols} onClearSubRows={onClearSubRows}
+                  onUpdateCol={onUpdateCol} onUpdateSubCol={onUpdateSubCol}
+                  onSelectSubRow={onSelectSubRow}
+                />
+              </div>
             ))}
           </ResizableGrid>
         )}

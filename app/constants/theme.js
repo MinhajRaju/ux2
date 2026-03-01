@@ -1,3 +1,19 @@
+/**
+ * DEPTH_PALETTE — color scheme for nested column depths.
+ * Used by: CanvasColumn, ColProps, LayersPanel.
+ * Single source of truth — never duplicate this array.
+ */
+export const DEPTH_PALETTE = [
+  { accent: '#6366f1', light: '#eef2ff' },
+  { accent: '#0ea5e9', light: '#f0f9ff' },
+  { accent: '#10b981', light: '#ecfdf5' },
+  { accent: '#f59e0b', light: '#fffbeb' },
+  { accent: '#ef4444', light: '#fee2e2' },
+];
+
+/** Helper: get palette entry for a given depth, clamped to array bounds */
+export const depthPalette = (depth) => DEPTH_PALETTE[Math.min(depth, DEPTH_PALETTE.length - 1)];
+
 export const T = {
   primary: '#6366f1',
   primaryLight: '#eef2ff',

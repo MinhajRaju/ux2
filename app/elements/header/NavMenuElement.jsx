@@ -3,7 +3,7 @@ export default function NavMenuElement({ props, mode }) {
   const p = props || {};
   const items = p.items || [];
   return (
-    <nav style={{ display: 'flex', alignItems: 'center', gap: p.gap || 28 }}>
+    <nav className="hb-nav" style={{ display: 'flex', alignItems: 'center', gap: p.gap || 28, maxWidth: '100%' }}>
       {items.map(item => (
         <a
           key={item.id}
@@ -16,6 +16,7 @@ export default function NavMenuElement({ props, mode }) {
             textDecoration: 'none',
             cursor: mode === 'edit' ? 'default' : 'pointer',
             transition: 'color 0.2s',
+            whiteSpace: 'nowrap',
           }}
         >
           {item.label}

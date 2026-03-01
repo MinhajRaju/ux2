@@ -1,5 +1,14 @@
 'use client';
-import FooterBuilder from '../../../builders/FooterBuilder';
+import TemplateBuilder from '../../../builders/TemplateBuilder';
+import { useFooterStore } from '@/store/useBuilderStore';
+import { footerCanvasConfig } from '@/configs/footerCanvasConfig';
+
 export default function FooterBuilderPage() {
-  return <FooterBuilder />;
+  return (
+    <TemplateBuilder
+      type="footer"
+      store={useFooterStore}
+      config={footerCanvasConfig}
+    />
+  );
 }

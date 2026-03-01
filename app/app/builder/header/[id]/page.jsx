@@ -1,8 +1,9 @@
-// src/app/builder/header/[id]/page.jsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { BuilderShell } from '@/components/builder/BuilderShell';
+import { useHeaderStore } from '@/store/useBuilderStore';
+import { headerCanvasConfig } from '@/configs/headerCanvasConfig';
 import { getHeaders, saveHeader } from '@/lib/db';
 
 export default function HeaderBuilderPage() {
@@ -15,19 +16,18 @@ export default function HeaderBuilderPage() {
     setDoc(h || null);
   }, [params.id]);
 
-  if (!doc) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#94a3b8' }}>Loading...</div>;
+  if (!doc) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#94a3b8' }}>Loading…</div>;
 
   return (
     <BuilderShell
+      store={useHeaderStore}
+      config={headerCanvasConfig}
       docType="header"
       docId={doc.id}
       docSlug=""
       docTitle={doc.name}
       sections={doc.sections || []}
-      onSave={(sections) => {
-        saveHeader({ ...doc, sections });
-        return Promise.resolve();
-      }}
+      onSave={(sections) => { saveHeader({ ...doc, sections }); return Promise.resolve(); }}
     />
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 /**
  * /[slug] — public rendered page
- * Reads template data from localStorage (themeStore) and renders
- * the matching page wrapped in the active header + footer.
+ * Reads template data via themeStore (same storage layer as ThemeBuilder dashboard).
  */
 import { useEffect, useState } from 'react';
+import { loadStore } from '../../lib/themeStore';
 import { StructureRenderer } from '../../components/shared/StructureRenderer';
 import { headerCanvasConfig } from '../../configs/headerCanvasConfig';
 import { pageCanvasConfig }   from '../../configs/pageCanvasConfig';
@@ -17,8 +17,7 @@ export default function RenderedPage({ params }) {
 
   useEffect(() => {
     try {
-      const templates      = JSON.parse(localStorage.getItem('ux-theme-templates') || '[]');
-      const globalSettings = JSON.parse(localStorage.getItem('ux-theme-settings') || '{}');
+      const { templates, globalSettings } = loadStore();
 
       const page   = templates.find(t => t.type === 'page' && t.slug === slug);
       const header = templates.find(t => t.id === globalSettings.activeHeaderId);

@@ -1,5 +1,14 @@
 'use client';
-import HeaderBuilder from '../../../builders/HeaderBuilder';
+import TemplateBuilder from '../../../builders/TemplateBuilder';
+import { useHeaderStore } from '@/store/useBuilderStore';
+import { headerCanvasConfig } from '@/configs/headerCanvasConfig';
+
 export default function HeaderBuilderPage() {
-  return <HeaderBuilder />;
+  return (
+    <TemplateBuilder
+      type="header"
+      store={useHeaderStore}
+      config={headerCanvasConfig}
+    />
+  );
 }

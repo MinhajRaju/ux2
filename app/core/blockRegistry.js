@@ -34,24 +34,12 @@ export const ELEMENT_ICON = {
   categories:    '🗂',
 };
 
-export const ELEMENT_COLOR = {
-  heading:       '#8b5cf6',
-  text:          '#0ea5e9',
-  image:         '#10b981',
-  button:        '#f59e0b',
-  video:         '#ef4444',
-  divider:       '#94a3b8',
-  html:          '#6366f1',
-  logo:          '#6366f1',
-  menu:          '#6366f1',
-  'search-bar':  '#8b5cf6',
-  'cart-icon':   '#f59e0b',
-  'wishlist-icon':'#ef4444',
-  'user-icon':   '#10b981',
-  categories:    '#06b6d4',
-};
+/** Derived from ELEMENT_TYPES — single source of truth for colors */
+export const ELEMENT_COLOR = Object.fromEntries(
+  ELEMENT_TYPES.map(e => [e.type, e.color])
+);
 
-export function getElementTypes({ excludeRow = false } = {}) {
+export function getElementTypes() {
   return ELEMENT_TYPES;
 }
 

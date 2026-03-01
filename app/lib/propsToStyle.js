@@ -1,4 +1,5 @@
 // src/lib/propsToStyle.js
+import { resolveBgStyle } from './bgStyle';
 
 /** Convert element props to inline CSS style object */
 export function propsToStyle(props = {}) {
@@ -44,24 +45,10 @@ export function propsToStyle(props = {}) {
   return style;
 }
 
-/** Convert row/col settings to CSS */
+/** Convert row/col settings to CSS — delegates to resolveBgStyle */
 export function rowBgStyle(s = {}) {
-  const base = { transition: 'background 0.3s ease' };
-
-  if (s.bgType === 'gradient')
-    return {
-      ...base,
-      background: `linear-gradient(${s.gradientDir || '135deg'},${s.gradientFrom || '#6366f1'},${s.gradientTo || '#a855f7'})`,
-    };
-
-  if (s.bgType === 'image' && s.bgImage)
-    return {
-      ...base,
-      backgroundImage: `url(${s.bgImage})`,
-      backgroundSize:     s.bgSize     || 'cover',
-      backgroundPosition: s.bgPosition || 'center',
-      backgroundRepeat:   'no-repeat',
-    };
-
-  return { ...base, background: s.bg || '#ffffff' };
+  return {
+    transition: 'background 0.3s ease',
+    ...resolveBgStyle(s, '#ffffff'),
+  };
 }

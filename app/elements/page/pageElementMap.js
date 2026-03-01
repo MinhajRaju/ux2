@@ -12,6 +12,7 @@ export const pageElementMap = {
     label: 'Heading',
     icon: 'H',
     color: '#8b5cf6',
+    group: 'Typography',
     defaultProps: {
       content: 'Your Heading Here',
       tag: 'h2',
@@ -27,6 +28,7 @@ export const pageElementMap = {
     label: 'Text',
     icon: '¶',
     color: '#0ea5e9',
+    group: 'Typography',
     defaultProps: {
       content: 'Write your text content here. Click to edit.',
       fontSize: 16,
@@ -41,6 +43,7 @@ export const pageElementMap = {
     label: 'Image',
     icon: '🖼',
     color: '#10b981',
+    group: 'Media',
     defaultProps: {
       src: '',
       alt: 'Image',
@@ -55,6 +58,7 @@ export const pageElementMap = {
     label: 'Button',
     icon: '⬚',
     color: '#f59e0b',
+    group: 'Interactive',
     defaultProps: {
       text: 'Click Me',
       href: '#',
@@ -73,6 +77,7 @@ export const pageElementMap = {
     label: 'Divider',
     icon: '—',
     color: '#94a3b8',
+    group: 'Layout',
     defaultProps: {
       style: 'solid',
       color: '#e2e8f0',
@@ -86,6 +91,7 @@ export const pageElementMap = {
     label: 'Video',
     icon: '▶',
     color: '#ef4444',
+    group: 'Media',
     defaultProps: {
       src: '',
       poster: '',
@@ -99,6 +105,7 @@ export const pageElementMap = {
     label: 'HTML',
     icon: '</>',
     color: '#6366f1',
+    group: 'Advanced',
     defaultProps: {
       code: '<p>Custom HTML here</p>',
     },

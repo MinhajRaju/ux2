@@ -1,24 +1,22 @@
 'use client';
+/**
+ * PageBuilder — builder UI for page templates.
+ * Uses the same TemplateBuilder pattern but with page-specific config and
+ * preview showing header + page + footer together.
+ */
 import { useState, useEffect } from 'react';
 import { Monitor, Smartphone, Eye, Plus, ChevronDown, Save, ArrowLeft } from 'lucide-react';
 import { T } from '../constants/theme';
-import { Canvas } from '../components/canvas/Canvas';
-import { LeftPanel } from '../components/panels/LeftPanel';
-import { RightPanel } from '../components/panels/RightPanel';
-import { pageCanvasConfig } from '../configs/pageCanvasConfig';
-import { usePageStore } from '../store/useBuilderStore';
+import { Canvas }     from '../components/canvas/Canvas';
+import { LeftPanel }  from '../components/builder/panels/left/LeftPanel';
+import { RightPanel } from '../components/builder/panels/right/RightPanel';
 import { StructureRenderer } from '../components/shared/StructureRenderer';
-import { useHeaderStore, useFooterStore } from '../store/useBuilderStore';
+import { pageCanvasConfig }   from '../configs/pageCanvasConfig';
 import { headerCanvasConfig } from '../configs/headerCanvasConfig';
 import { footerCanvasConfig } from '../configs/footerCanvasConfig';
+import { usePageStore, useHeaderStore, useFooterStore } from '../store/useBuilderStore';
 
-export default function PageBuilder({
-  slug = '/',
-  templateName,
-  initialSections,
-  onSave,
-  onBack,
-}) {
+export default function PageBuilder({ slug = '/', templateName, initialSections, onSave, onBack }) {
   const [isMobile, setIsMobile] = useState(false);
   const [preview,  setPreview]  = useState(false);
   const [saving,   setSaving]   = useState(false);
@@ -29,15 +27,19 @@ export default function PageBuilder({
   const clearSelected = usePageStore(s => s.clearSelected);
   const setSelected   = usePageStore(s => s.setSelected);
   const addSection    = usePageStore(s => s.addSection);
+  const deleteSection = usePageStore(s => s.deleteSection);
+  const deleteRow     = usePageStore(s => s.deleteRow);
+  const deleteElement = usePageStore(s => s.deleteElement);
   const loadData      = usePageStore(s => s.loadData);
+  const openRowModal  = usePageStore(s => s.openRowModal);
+  const clearNesting  = usePageStore(s => s.clearNesting);
+  const deleteSubCol  = usePageStore(s => s.deleteSubCol);
 
   const headerSections = useHeaderStore(s => s.sections);
   const footerSections = useFooterStore(s => s.sections);
 
   useEffect(() => {
-    if (initialSections !== undefined) {
-      loadData({ sections: initialSections });
-    }
+    if (initialSections !== undefined) loadData({ sections: initialSections });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,7 +68,6 @@ export default function PageBuilder({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      {/* Top bar */}
       <div style={{ height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: '#fff', borderBottom: `1px solid ${T.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={handleBack} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: T.textLight, background: 'none', border: 'none', cursor: 'pointer' }}>
@@ -81,7 +82,7 @@ export default function PageBuilder({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button onClick={() => setIsMobile(false)} style={{ padding: '6px 10px', border: `1.5px solid ${!isMobile ? T.primary : T.border}`, borderRadius: 7, background: !isMobile ? `${T.primary}10` : '#fff', color: !isMobile ? T.primary : T.textLight, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Monitor size={15} /></button>
-          <button onClick={() => setIsMobile(true)} style={{ padding: '6px 10px', border: `1.5px solid ${isMobile ? T.primary : T.border}`, borderRadius: 7, background: isMobile ? `${T.primary}10` : '#fff', color: isMobile ? T.primary : T.textLight, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Smartphone size={15} /></button>
+          <button onClick={() => setIsMobile(true)}  style={{ padding: '6px 10px', border: `1.5px solid ${isMobile  ? T.primary : T.border}`, borderRadius: 7, background: isMobile  ? `${T.primary}10` : '#fff', color: isMobile  ? T.primary : T.textLight, cursor: 'pointer', display: 'flex', alignItems: 'center' }}><Smartphone size={15} /></button>
           <button onClick={addSection} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', background: '#f8fafc', color: T.textMid, border: `1.5px solid ${T.border}`, borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
             <Plus size={14} /> Add Section
           </button>
@@ -96,17 +97,24 @@ export default function PageBuilder({
         </div>
       </div>
 
-      {/* Main layout */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         <LeftPanel
           elementMap={pageCanvasConfig.elementMap}
           sections={sections}
           selectedId={selectedId}
-          onSelectSection={(id) => setSelected(id, { mode: 'section' })}
-          onSelectElem={(id, meta) => setSelected(id, { ...meta, mode: 'element' })}
-          onSelectCol={(id, meta) => setSelected(id, { ...meta, mode: 'col' })}
-          onAddSection={addSection}
           singleSection={pageCanvasConfig.singleSection}
+          onSelectSection={(id) => setSelected(id, { mode: 'section' })}
+          onSelectRow={(id) => setSelected(id, { mode: 'row' })}
+          onSelectElem={(id, m) => setSelected(id, { ...m, mode: 'element' })}
+          onSelectCol={(id, m) => setSelected(id, { ...m, mode: 'col' })}
+          onSelectSubCol={(id, m) => setSelected(id, { ...m, mode: 'col' })}
+          onAddSection={addSection}
+          onAddRow={() => { const last = sections[sections.length - 1]; if (last) openRowModal(last.id); }}
+          onDeleteSection={deleteSection}
+          onDeleteRow={deleteRow}
+          onDeleteElement={deleteElement}
+          onClearNesting={clearNesting}
+          onDeleteSubCol={deleteSubCol}
         />
         <Canvas store={usePageStore} config={pageCanvasConfig} isMobile={isMobile} />
         {selectedId && selectionMeta && (
