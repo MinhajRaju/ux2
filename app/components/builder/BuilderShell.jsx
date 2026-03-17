@@ -12,6 +12,7 @@ import { LeftPanel }  from '@/components/builder/panels/left/LeftPanel';
 import { RightPanel } from '@/components/builder/panels/right/RightPanel';
 import { StructureRenderer } from '@/components/shared/StructureRenderer';
 import { useRouter } from 'next/navigation';
+import CardDesignerModal from '@/elements/page/card-designer/CardDesignerModal';
 
 export function BuilderShell({ store, config, docType, docSlug, docTitle, sections: initialSections, onSave }) {
   const router = useRouter();
@@ -168,6 +169,8 @@ export function BuilderShell({ store, config, docType, docSlug, docTitle, sectio
   }
 
   return (
+    <>
+    <CardDesignerModal />
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
 
       {/* ── Top bar ── */}
@@ -333,6 +336,7 @@ export function BuilderShell({ store, config, docType, docSlug, docTitle, sectio
         }
       `}</style>
     </div>
+    </>
   );
 }
 

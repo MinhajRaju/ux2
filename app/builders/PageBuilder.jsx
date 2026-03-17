@@ -15,6 +15,7 @@ import { pageCanvasConfig }   from '../configs/pageCanvasConfig';
 import { headerCanvasConfig } from '../configs/headerCanvasConfig';
 import { footerCanvasConfig } from '../configs/footerCanvasConfig';
 import { usePageStore, useHeaderStore, useFooterStore } from '../store/useBuilderStore';
+import CardDesignerModal from '../elements/page/card-designer/CardDesignerModal';
 
 export default function PageBuilder({ slug = '/', templateName, initialSections, onSave, onBack }) {
   const [isMobile, setIsMobile] = useState(false);
@@ -67,6 +68,8 @@ export default function PageBuilder({ slug = '/', templateName, initialSections,
   }
 
   return (
+    <>
+    <CardDesignerModal />
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <div style={{ height: 52, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', background: '#fff', borderBottom: `1px solid ${T.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -122,5 +125,6 @@ export default function PageBuilder({ slug = '/', templateName, initialSections,
         )}
       </div>
     </div>
+    </>
   );
 }

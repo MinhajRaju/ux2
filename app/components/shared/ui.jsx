@@ -168,7 +168,7 @@ export function ColorPick({ label, val, set }) {
             onChange={e => set(e.target.value)}
             style={{ position: 'absolute', inset: -4, width: 'calc(100% + 8px)', height: 'calc(100% + 8px)', cursor: 'pointer', border: 'none', padding: 0, opacity: val ? 1 : 0.01 }}
           />
-          {val && <div style={{ position: 'absolute', inset: 0, background: val, borderRadius: 4 }} />}
+          {val && <div style={{ position: 'absolute', inset: 0, background: val, borderRadius: 4, pointerEvents: 'none' }} />}
         </div>
         {/* Hex/rgba text */}
         <input
@@ -188,24 +188,66 @@ export function ColorPick({ label, val, set }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SliderInput — range + live numeric value
+// SliderInput — range + live numeric value (thin track style)
 // ─────────────────────────────────────────────────────────────────────────────
 export function SliderInput({ label, val, set, min = 0, max = 100, unit = '', step = 1 }) {
   return (
     <div>
       {label && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
           <span style={{ fontSize: 11, fontWeight: 600, color: T.textLight }}>{label}</span>
-          <span style={{ fontSize: 11, color: T.textMid, fontWeight: 600 }}>{val ?? min}{unit}</span>
+          <span style={{ fontSize: 11, color: T.primary, fontWeight: 700, background: T.primaryLight, padding: '1px 6px', borderRadius: 4 }}>{val ?? min}{unit}</span>
         </div>
       )}
-      <input
-        type="range"
-        min={min} max={max} step={step}
-        value={val ?? min}
-        onChange={e => set(+e.target.value)}
-        style={{ width: '100%', accentColor: T.primary, cursor: 'pointer', height: 4 }}
-      />
+      <div style={{ position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
+        <div style={{
+          position: 'absolute', left: 0, right: 0, height: 2,
+          background: T.borderLight, borderRadius: 2, pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', left: 0, height: 2, borderRadius: 2,
+          background: `linear-gradient(90deg, ${T.primary}, #8b5cf6)`,
+          width: `${((val ?? min) - min) / (max - min) * 100}%`,
+          pointerEvents: 'none',
+        }} />
+        <input
+          type="range"
+          min={min} max={max} step={step}
+          value={val ?? min}
+          onChange={e => set(+e.target.value)}
+          style={{
+            position: 'relative', width: '100%', margin: 0,
+            WebkitAppearance: 'none', appearance: 'none',
+            background: 'transparent', cursor: 'pointer', height: 16,
+            accentColor: T.primary,
+          }}
+        />
+      </div>
+      <style>{`
+        input[type=range]::-webkit-slider-thumb {
+          -webkit-appearance: none;
+          width: 13px; height: 13px;
+          border-radius: 50%;
+          background: #fff;
+          border: 2px solid ${T.primary};
+          box-shadow: 0 1px 4px rgba(99,102,241,0.25);
+          cursor: pointer;
+          transition: box-shadow 0.15s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+          box-shadow: 0 0 0 4px rgba(99,102,241,0.15);
+        }
+        input[type=range]::-moz-range-thumb {
+          width: 13px; height: 13px;
+          border-radius: 50%;
+          background: #fff;
+          border: 2px solid ${T.primary};
+          box-shadow: 0 1px 4px rgba(99,102,241,0.25);
+          cursor: pointer;
+        }
+        input[type=range]::-webkit-slider-runnable-track { background: transparent; }
+        input[type=range]::-moz-range-track { background: transparent; height: 2px; }
+      `}</style>
     </div>
   );
 }
